@@ -1,3 +1,5 @@
+[![NuGet package](https://img.shields.io/nuget/v/Rixian.MSBuild.TailwindCSS.svg)](https://nuget.org/packages/Rixian.MSBuild.TailwindCSS)
+
 # Rixian.MSBuild.TailwindCSS
 
 Welcome!
