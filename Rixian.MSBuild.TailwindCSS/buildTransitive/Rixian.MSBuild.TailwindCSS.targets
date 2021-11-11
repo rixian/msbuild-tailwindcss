@@ -1,0 +1,82 @@
+<Project>
+    <PropertyGroup>
+        <TailwindCssInput Condition="'$(TailwindCssInput)' == ''">wwwroot/css/tailwind.css</TailwindCssInput>
+        <TailwindCssOutput Condition="'$(TailwindCssOutput)' == ''">wwwroot/css/tailwind.generated.css</TailwindCssOutput>
+        <TailwindCssConfig Condition="'$(TailwindCssConfig)' == ''">tailwind.config.js</TailwindCssConfig>
+        <TailwindCssDebug Condition="'$(TailwindCssDebug)' == ''">false</TailwindCssDebug>
+    </PropertyGroup>
+
+    <Choose>
+        <When Condition="Exists('$(ProjectDir)$(TailwindCssConfig)')">
+            <Choose>
+                <When Condition="!Exists('$(ProjectDir)$(TailwindCssOutput)') OR $([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssInput)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssOutput)').Ticks) OR $([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssConfig)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssOutput)').Ticks)">
+                    <PropertyGroup>
+                        <CompileTailwindCss>true</CompileTailwindCss>
+                    </PropertyGroup>
+                </When>
+                <Otherwise>
+                    <PropertyGroup>
+                        <CompileTailwindCss>false</CompileTailwindCss>
+                    </PropertyGroup>
+                </Otherwise>
+            </Choose>
+        </When>
+        <Otherwise>
+            <Choose>
+                <When Condition="!Exists('$(ProjectDir)$(TailwindCssOutput)') OR $([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssInput)').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssOutput)').Ticks)">
+                    <PropertyGroup>
+                        <CompileTailwindCss>true</CompileTailwindCss>
+                    </PropertyGroup>
+                </When>
+                <Otherwise>
+                    <PropertyGroup>
+                        <CompileTailwindCss>false</CompileTailwindCss>
+                    </PropertyGroup>
+                </Otherwise>
+            </Choose>
+        </Otherwise>
+    </Choose>
+
+    <Target Name="EnsureBaselineTailwindCssFiles" BeforeTargets="VerifyTailwindCssFiles" Condition="!Exists('$(ProjectDir)$(TailwindCssInput)')">
+      <PropertyGroup>
+        <TailwindCssBaseLines>
+@tailwind base%3B
+@tailwind components%3B
+@tailwind utilities%3B
+
+@layer components {
+}
+        </TailwindCssBaseLines>
+      </PropertyGroup>
+        <Touch Files="$(ProjectDir)$(TailwindCssInput)" AlwaysCreate="true" />
+        <WriteLinesToFile File="$(ProjectDir)$(TailwindCssInput)" Lines="$(TailwindCssBaseLines)"/>
+    </Target>
+
+    <Target Name="VerifyTailwindCssFiles" BeforeTargets="YarnBuild">
+        <Error Condition="!Exists('$(ProjectDir)$(TailwindCssInput)')" Text="Cannot compile TailwindCss because the input file $(TailwindCssInput) does not exist." />
+    </Target>
+
+    <Target Name="YarnInstall" BeforeTargets="YarnBuild">
+        <Yarn Command="install" Condition=" ! Exists('node_modules/')" />
+        <Yarn Command="add npx --dev" Condition=" ! Exists('node_modules/npx/')" />
+        <Yarn Command="add @tailwindcss/forms --dev" Condition=" ! Exists('node_modules/@tailwindcss/forms/')" />
+        <Yarn Command="add postcss --dev" Condition=" ! Exists('node_modules/postcss/')" />
+        <Yarn Command="add tailwind-css-variables --dev" Condition=" ! Exists('node_modules/tailwind-css-variables/')" />
+        <Yarn Command="add tailwindcss --dev" Condition=" ! Exists('node_modules/tailwindcss/')" />
+    </Target>
+
+    <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+        <Message Condition="$(TailwindCssDebug) == 'true'" Text="$(TailwindCssOutput) TICKS - *$([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssOutput)').Ticks)*" Importance="high" />
+        <Message Condition="$(TailwindCssDebug) == 'true'" Text="$(TailwindCssInput) TICKS - *$([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssInput)').Ticks)*" Importance="high" />
+        <Message Condition="$(TailwindCssDebug) == 'true'" Text="$(TailwindCssConfig) TICKS - *$([System.IO.File]::GetLastWriteTime('$(ProjectDir)$(TailwindCssConfig)').Ticks)*" Importance="high" />
+        <Message Condition="$(TailwindCssDebug) == 'true'" Text="CompileTailwindCss - *$(CompileTailwindCss)*" Importance="high" />
+
+        <Message Condition="$(TailwindCssDebug) == 'true' AND $(CompileTailwindCss) == 'true'" Text="COMPILING TAILWIND.CSS" Importance="high" />
+        <Message Condition="$(TailwindCssDebug) == 'true' AND $(CompileTailwindCss) == 'false'" Text="*NOT* COMPILING TAILWIND.CSS" Importance="high" />
+    </Target>
+
+    <PropertyGroup>
+        <YarnBuildCommand Condition="$(CompileTailwindCss) == 'true' AND Exists('$(ProjectDir)$(TailwindCssConfig)')">npx tailwindcss build -i "$(ProjectDir)$(TailwindCssInput)" -c "$(ProjectDir)$(TailwindCssConfig)" -o "$(ProjectDir)$(TailwindCssOutput)"</YarnBuildCommand>
+        <YarnBuildCommand Condition="$(CompileTailwindCss) == 'true' AND !Exists('$(ProjectDir)$(TailwindCssConfig)')">npx tailwindcss build -i "$(ProjectDir)$(TailwindCssInput)" -o "$(ProjectDir)$(TailwindCssOutput)"</YarnBuildCommand>
+    </PropertyGroup>
+</Project>
